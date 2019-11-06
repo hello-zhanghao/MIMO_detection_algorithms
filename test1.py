@@ -12,6 +12,3 @@ ay.yaxis.set_minor_locator(miloc)
 ax.grid(axis='y', which='minor')
 
 plt.show()
-# plt.grid(b=True, which='minor', axis='y', linestyle='--')
-# # (b, which, axis, color, linestyle, linewidth， **kwargs)
-# plt.show()
