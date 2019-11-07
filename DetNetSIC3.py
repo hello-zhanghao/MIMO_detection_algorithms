@@ -2,7 +2,7 @@ import tensorflow as tf
 import numpy as np
 
 
-class DetNetSIC2(object):
+class DetNetSIC3(object):
     def __init__(self, params):
         self.Nr = params['Nr']
         self.Nt = params['Nt']
@@ -11,8 +11,8 @@ class DetNetSIC2(object):
         self.x = tf.compat.v1.placeholder(shape=[None, 2 * self.Nt], dtype=tf.float32)
         self.noise_sigma2 = tf.compat.v1.placeholder(shape=(None, 1), dtype=tf.float32)
         self.batch_size = tf.shape(self.H)[0]
-        self.L = params['DetNetSIC2_layer']
-        self.outuser = params['DetNetSIC2_outuser']
+        self.L = params['DetNetSIC3_layer']
+        self.outuser = params['DetNetSIC3_outuser']
         self.constellation = params['constellation']
         self.M = tf.shape(params['constellation'])[0]
         self.learning_rate = params['learning_rate']
@@ -26,15 +26,119 @@ class DetNetSIC2(object):
             xhatk_initial = self.batch_matvec_mul(HtHinv, Hty)
         else:
             xhatk_initial = tf.zeros(shape=[self.batch_size, 2 * self.Nt], dtype=tf.float32)
-        xhat = self.SIC(xhatk_initial, self.H, self.y)
+        xhat_cut, xhat, train_vars = self.SIC(xhatk_initial, self.H, self.y)
+
+        first_vars = train_vars[0]
+        target_user = np.reshape(np.concatenate(([range(0, 2)],
+                                                 [range(0 + self.Nt, 2 + self.Nt)]), axis=1), [-1])
+        target_user = tf.cast(target_user, tf.int32)
+        x_est1 = xhat_cut[0][-1]
+        print(111, xhat_cut[1])
+        print(222, tf.gather(self.x, target_user, axis=1))
+        loss1 = self.loss_fun(xhat_cut[0], tf.gather(self.x, target_user, axis=1))
+        train_step1 = tf.compat.v1.train.AdamOptimizer(
+            self.learning_rate).minimize(tf.reduce_mean(loss1), var_list=first_vars)
+        x_est_idx1 = self.demodulate(x_est1)
+        indices1 = self.demodulate(tf.gather(self.x, target_user, axis=1))
+        accuracy1 = self.accuracy(indices1, x_est_idx1)
+        ser1 = 1 - accuracy1
+        DetNetSIC3_node1 = {
+            'xhat': x_est1,
+            'ser': ser1,
+            'x': self.x,
+            'y': self.y,
+            'H': self.H,
+            'noise_sigma2': self.noise_sigma2,
+            'M': self.M,
+            'train': train_step1,
+            'loss': loss1,
+        }
+
+        second_vars = train_vars[1]
+        for variable in train_vars[0]:
+            second_vars.remove(variable)
+        target_user = np.reshape(np.concatenate(([range(2, 4)],
+                                                 [range(2 + self.Nt, 4 + self.Nt)]), axis=1), [-1])
+        target_user = tf.cast(target_user, tf.int32)
+        x_est2 = xhat_cut[1][-1]
+
+        loss2 = self.loss_fun(xhat_cut[1], tf.gather(self.x, target_user, axis=1))
+        train_step2 = tf.compat.v1.train.AdamOptimizer(
+            self.learning_rate).minimize(tf.reduce_mean(loss2), var_list=second_vars)
+        x_est_idx2 = self.demodulate(x_est2)
+        indices2 = self.demodulate(tf.gather(self.x, target_user, axis=1))
+        accuracy2 = self.accuracy(indices2, x_est_idx2)
+        ser2 = 1 - accuracy2
+        DetNetSIC3_node2 = {
+            'xhat': x_est2,
+            'ser': ser2,
+            'x': self.x,
+            'y': self.y,
+            'H': self.H,
+            'noise_sigma2': self.noise_sigma2,
+            'M': self.M,
+            'train': train_step2,
+            'loss': loss2,
+        }
+
+        third_vars = train_vars[2]
+        for variable in train_vars[1]:
+            third_vars.remove(variable)
+        target_user = np.reshape(np.concatenate(([range(4, 6)],
+                                                 [range(4 + self.Nt, 6 + self.Nt)]), axis=1), [-1])
+        target_user = tf.cast(target_user, tf.int32)
+        x_est3 = xhat_cut[2][-1]
+        loss3 = self.loss_fun(xhat_cut[2], tf.gather(self.x, target_user, axis=1))
+        train_step3 = tf.compat.v1.train.AdamOptimizer(
+            self.learning_rate).minimize(tf.reduce_mean(loss3), var_list=third_vars)
+        x_est_idx3 = self.demodulate(x_est3)
+        indices3 = self.demodulate(tf.gather(self.x, target_user, axis=1))
+        accuracy3 = self.accuracy(indices3, x_est_idx3)
+        ser3 = 1 - accuracy3
+        DetNetSIC3_node3 = {
+            'xhat': x_est3,
+            'ser': ser3,
+            'x': self.x,
+            'y': self.y,
+            'H': self.H,
+            'noise_sigma2': self.noise_sigma2,
+            'M': self.M,
+            'train': train_step3,
+            'loss': loss3,
+        }
+
+        forth_vars = train_vars[3]
+        for variable in train_vars[2]:
+            forth_vars.remove(variable)
+        target_user = np.reshape(np.concatenate(([range(6, 8)],
+                                                 [range(6 + self.Nt, 8 + self.Nt)]), axis=1), [-1])
+        target_user = tf.cast(target_user, tf.int32)
+        x_est4 = xhat_cut[3][-1]
+        loss4 = self.loss_fun(xhat_cut[3], tf.gather(self.x, target_user, axis=1))
+        train_step4 = tf.compat.v1.train.AdamOptimizer(
+            self.learning_rate).minimize(tf.reduce_mean(loss4), var_list=forth_vars)
+        x_est_idx4 = self.demodulate(x_est4)
+        indices4 = self.demodulate(tf.gather(self.x, target_user, axis=1))
+        accuracy4 = self.accuracy(indices4, x_est_idx4)
+        ser4 = 1 - accuracy4
+        DetNetSIC3_node4 = {
+            'xhat': x_est4,
+            'ser': ser4,
+            'x': self.x,
+            'y': self.y,
+            'H': self.H,
+            'noise_sigma2': self.noise_sigma2,
+            'M': self.M,
+            'train': train_step4,
+            'loss': loss4,
+        }
+
         x_est = xhat[-1]
-        loss = self.loss_fun(xhat, self.x)
-        train_step = tf.compat.v1.train.AdamOptimizer(self.learning_rate).minimize(tf.reduce_mean(loss))
         x_est_idx = self.demodulate(x_est)
         indices = self.demodulate(self.x)
         accuracy = self.accuracy(indices, x_est_idx)
         ser = 1 - accuracy
-        DetNetSIC_nodes = {
+        DetNetSIC3_nodes = {
             'xhat': x_est,
             'ser': ser,
             'x': self.x,
@@ -42,10 +146,8 @@ class DetNetSIC2(object):
             'H': self.H,
             'noise_sigma2': self.noise_sigma2,
             'M': self.M,
-            'train': train_step,
-            'loss': loss,
         }
-        return DetNetSIC_nodes
+        return DetNetSIC3_node1, DetNetSIC3_node2, DetNetSIC3_node3, DetNetSIC3_node4, DetNetSIC3_nodes
 
     def ser(self, xhat):
         x_hat_idx = self.demodulate(xhat)
@@ -114,7 +216,7 @@ class DetNetSIC2(object):
             target_user = tf.cast(target_user, tf.int32)
             cancel_user = tf.cast(cancel_user, tf.int32)
             y_cut = y - self.batch_matvec_mul(tf.gather(H, cancel_user, axis=2), tf.gather(xhatt, cancel_user, axis=1))
-            H_cut= tf.gather(H, target_user, axis=2)
+            H_cut = tf.gather(H, target_user, axis=2)
             x_cut = tf.gather(xhatt, target_user, axis=1)
             xhat_cut[i] = self.DetNet(x_cut, H_cut, y_cut, self.L, self.outuser)
         xhat = xhat_cut[0]
@@ -128,6 +230,7 @@ class DetNetSIC2(object):
         return xhat
 
     def SIC(self, xhatt, H, y):
+        train_vars = []
         xhat_cut = list(range(self.Nt // self.outuser))
         for i in range(self.Nt // self.outuser):
             start = i * self.outuser
@@ -143,29 +246,31 @@ class DetNetSIC2(object):
             H_cut = tf.gather(H, target_user, axis=2)
             x_cut = tf.gather(xhatt, target_user, axis=1)
             xhat_cut[i] = self.DetNet(x_cut, H_cut, y_cut, self.L, self.outuser)
+            print(i, xhat_cut[i])
+            train_vars.append(tf.compat.v1.trainable_variables())  # 当前可训练变量集合
 
             x_EST = xhat_cut[i][-1]
-            # shape = tf.shape(x_EST)
-            # x_EST = tf.reshape(x_EST, shape=[-1, 1])
-            # constellation = tf.reshape(self.constellation, [1, -1])
-            # indices = tf.cast(tf.argmin(tf.abs(x_EST - constellation), axis=1), tf.int32)
-            # indices = tf.reshape(indices, shape=shape)
-            # x_EST = tf.gather(self.constellation, indices)  # x_EST是解调后的信号
-            print('1', x_EST)
+            shape = tf.shape(x_EST)
+            x_EST = tf.reshape(x_EST, shape=[-1, 1])
+            constellation = tf.reshape(self.constellation, [1, -1])
+            indices = tf.cast(tf.argmin(tf.abs(x_EST - constellation), axis=1), tf.int32)
+            indices = tf.reshape(indices, shape=shape)
+            x_EST = tf.gather(self.constellation, indices)  # x_EST是解调后的信号
+            # print('1', x_EST)
             xhatt = tf.concat([xhatt[:, 0:start],
                                x_EST[:, 0:self.outuser],
                                xhatt[:, end:self.Nt+start],
                                x_EST[:, self.outuser: self.outuser*2],
                                xhatt[:, self.Nt+end: self.Nt+self.Nt]], axis=1)
-        xhat = xhat_cut[0]
-        print('4', xhat[0])
+        xhat = xhat_cut[0].copy()
+        # print('4', xhat[0])
         for i in range(self.L):
             for j in range(1, self.Nt // self.outuser):
                 Nt_temp = xhat[i].shape.as_list()[1]
                 xhat[i] = tf.concat([xhat[i][:, 0:Nt_temp//2], xhat_cut[j][i][:, 0:self.outuser],
                                     xhat[i][:, Nt_temp//2:Nt_temp],
                                      xhat_cut[j][i][:, self.outuser:self.outuser*2]], axis=1)
-        return xhat
+        return xhat_cut, xhat, train_vars
 
     def batch_matvec_mul(self, A, b, transpose_a=False):
         """
